@@ -88,12 +88,12 @@ void Tle::Initialize()
         throw TleException("Invalid line beginning for line two");
     }
 
-    unsigned int sat_number_1;
-    unsigned int sat_number_2;
+    unsigned long sat_number_1;
+    unsigned long sat_number_2;
 
-    ExtractInteger(line_one_.substr(TLE1_COL_NORADNUM,
+    ExtractULong(line_one_.substr(TLE1_COL_NORADNUM,
                 TLE1_LEN_NORADNUM), sat_number_1);
-    ExtractInteger(line_two_.substr(TLE2_COL_NORADNUM,
+    ExtractULong(line_two_.substr(TLE2_COL_NORADNUM,
                 TLE2_LEN_NORADNUM), sat_number_2);
 
     if (sat_number_1 != sat_number_2)
@@ -140,7 +140,7 @@ void Tle::Initialize()
                 TLE2_LEN_MEANANOMALY), 4, mean_anomaly_);
     ExtractDouble(line_two_.substr(TLE2_COL_MEANMOTION,
                 TLE2_LEN_MEANMOTION), 3, mean_motion_);
-    ExtractInteger(line_two_.substr(TLE2_COL_REVATEPOCH,
+    ExtractULong(line_two_.substr(TLE2_COL_REVATEPOCH,
                 TLE2_LEN_REVATEPOCH), orbit_number_);
     
     if (year < 57)
@@ -166,7 +166,46 @@ bool Tle::IsValidLineLength(const std::string& str)
  * @param[out] val The result
  * @exception TleException on conversion error
  */
-void Tle::ExtractInteger(const std::string& str, unsigned int& val)
+void Tle::ExtractInteger(const std::string& str, int& val)
+{
+    std::string temp;
+    bool found_digit = false;
+
+    for (std::string::const_iterator i = str.begin(); i != str.end(); ++i)
+    {
+        if (isdigit(*i))
+        {
+            found_digit = true;
+            temp += *i;
+        }
+        else if (found_digit)
+        {
+            throw TleException("Unexpected non digit");
+        }
+        else if (*i != ' ')
+        {
+            throw TleException("Invalid character");
+        }
+    }
+
+    if (temp.length() == 0)
+    {
+        temp += '0';
+    }
+
+    if (!Util::FromString<int>(temp, val))
+    {
+        throw TleException("Failed to convert value to integer");
+    }
+}
+
+/**
+ * Convert a string containing an unsigned integer
+ * @param[in] str The string to convert
+ * @param[out] val The result
+ * @exception TleException on conversion error
+ */
+void Tle::ExtractUInteger(const std::string& str, unsigned int& val)
 {
     std::string temp;
     bool found_digit = false;
@@ -194,6 +233,45 @@ void Tle::ExtractInteger(const std::string& str, unsigned int& val)
     }
 
     if (!Util::FromString<unsigned int>(temp, val))
+    {
+        throw TleException("Failed to convert value to integer");
+    }
+}
+
+/**
+ * Convert a string containing an unsigned long
+ * @param[in] str The string to convert
+ * @param[out] val The result
+ * @exception TleException on conversion error
+ */
+void Tle::ExtractULong(const std::string& str, unsigned long& val)
+{
+    std::string temp;
+    bool found_digit = false;
+
+    for (std::string::const_iterator i = str.begin(); i != str.end(); ++i)
+    {
+        if (isdigit(*i))
+        {
+            found_digit = true;
+            temp += *i;
+        }
+        else if (found_digit)
+        {
+            throw TleException("Unexpected non digit");
+        }
+        else if (*i != ' ')
+        {
+            throw TleException("Invalid character");
+        }
+    }
+
+    if (temp.length() == 0)
+    {
+        temp += '0';
+    }
+
+    if (!Util::FromString<unsigned long>(temp, val))
     {
         throw TleException("Failed to convert value to integer");
     }

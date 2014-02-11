@@ -122,7 +122,7 @@ public:
      * Get the norad number
      * @returns the norad number
      */
-    unsigned int NoradNumber() const
+    unsigned long NoradNumber() const
     {
         return norad_number_;
     }
@@ -262,7 +262,7 @@ public:
      * Get the orbit number
      * @returns the orbit number
      */
-    unsigned int OrbitNumber() const
+    unsigned long OrbitNumber() const
     {
         return orbit_number_;
     }
@@ -313,7 +313,9 @@ public:
 private:
     void Initialize();
     static bool IsValidLineLength(const std::string& str);
-    void ExtractInteger(const std::string& str, unsigned int& val);
+    void ExtractInteger(const std::string& str, int& val);
+    void ExtractUInteger(const std::string& str, unsigned int& val);
+    void ExtractULong(const std::string& str, unsigned long& val);
     void ExtractDouble(const std::string& str, int point_pos, double& val);
     void ExtractExponential(const std::string& str, double& val);
 
@@ -322,7 +324,7 @@ private:
     std::string line_one_;
     std::string line_two_;
 
-    unsigned int norad_number_;
+    unsigned long norad_number_;
     std::string int_designator_;
     DateTime epoch_;
     double mean_motion_dt2_;
@@ -334,7 +336,7 @@ private:
     double argument_perigee_;
     double mean_anomaly_;
     double mean_motion_;
-    unsigned int orbit_number_;
+    unsigned long orbit_number_;
 
     static const unsigned int TLE_LEN_LINE_DATA = 69;
     static const unsigned int TLE_LEN_LINE_NAME = 22;
