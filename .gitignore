@@ -2,3 +2,10 @@ libsgp4/*.o
 .deps
 config.*
 Makefile
+runtest/runtest
+runtest/*.o
+sattrack/sattrack
+sattrack/sattrack.o
+passpredict/passpredict
+passpredict/passpredict.o
+libsgp4/libsgp4.a
