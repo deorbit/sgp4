@@ -1,0 +1,4 @@
+libsgp4/*.o
+.deps
+config.*
+Makefile
