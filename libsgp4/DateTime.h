@@ -646,7 +646,7 @@ public:
     }
 
 private:
-    unsigned long long m_encoded;
+    long long m_encoded;
 };
 
 inline std::ostream& operator<<(std::ostream& strm, const DateTime& dt)
