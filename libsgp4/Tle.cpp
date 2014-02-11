@@ -414,7 +414,7 @@ void Tle::ExtractExponential(const std::string& str, double& val)
                 throw TleException("Invalid sign");
             }
         }
-        else if (i == str.begin() + str.length() - 2)
+        else if (i == str.begin() + static_cast<ptrdiff_t>(str.length()) - 2)
         {
             if (*i == '-' || *i == '+')
             {
