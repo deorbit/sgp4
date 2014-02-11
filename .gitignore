@@ -9,3 +9,4 @@ sattrack/sattrack.o
 passpredict/passpredict
 passpredict/passpredict.o
 libsgp4/libsgp4.a
+autom4te.cache
