@@ -57,7 +57,7 @@ public:
      * Constructor
      * @param[in] ticks raw tick value
      */
-    DateTime(unsigned long long ticks)
+    DateTime(long long ticks)
         : m_encoded(ticks)
     {
     }
