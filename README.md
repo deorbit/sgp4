@@ -1,0 +1,1 @@
+DanRW's implementation, from which this is derived, is here: http://www.danrw.com/sgp4-satellite.php
