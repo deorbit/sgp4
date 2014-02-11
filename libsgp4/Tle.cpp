@@ -111,7 +111,7 @@ void Tle::Initialize()
     int_designator_ = line_one_.substr(TLE1_COL_INTLDESC_A,
             TLE1_LEN_INTLDESC_A + TLE1_LEN_INTLDESC_B + TLE1_LEN_INTLDESC_C);
 
-    unsigned int year = 0;
+    int year = 0;
     double day = 0.0;
 
     ExtractInteger(line_one_.substr(TLE1_COL_EPOCH_A,
