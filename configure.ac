@@ -36,7 +36,8 @@ AC_CONFIG_FILES([Makefile
                  libsgp4/Makefile
                  passpredict/Makefile
                  runtest/Makefile
-                 sattrack/Makefile])
+                 sattrack/Makefile
+                 groundtrack/Makefile])
 
 AC_OUTPUT
 echo "---"
