@@ -8,6 +8,8 @@ sattrack/sattrack
 sattrack/sattrack.o
 passpredict/passpredict
 passpredict/passpredict.o
+groundtrack/groundtrack
+groundtrack/groundtrack.o
 libsgp4/libsgp4.a
 autom4te.cache
 *.sublime-project
