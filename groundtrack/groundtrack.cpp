@@ -15,6 +15,12 @@
 
 using namespace std;
 
+// Chronological sort.
+bool chron(const Tle& a, const Tle& b)
+{
+    return a.Epoch() < b.Epoch();
+}
+
 class Groundtrack
 {
 public:
@@ -25,6 +31,7 @@ public:
                   end_date_(end_date_),
                   tles_(tles)
 {
+    std::sort(tles_.begin(), tles_.end(), chron);
 }
 
 private:
