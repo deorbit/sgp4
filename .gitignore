@@ -14,3 +14,4 @@ libsgp4/libsgp4.a
 autom4te.cache
 *.sublime-project
 *.sublime-workspace
+npp.tle
