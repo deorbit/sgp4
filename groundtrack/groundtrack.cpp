@@ -30,7 +30,7 @@ public:
                 int dt,
                 std::vector<Tle> tles)
                 : start_date_(start_date),
-                  end_date_(end_date_),
+                  end_date_(end_date),
                   dt_(TimeSpan(0, 0, dt)),
                   tles_(tles),
                   active_tle_(0)
@@ -43,9 +43,13 @@ public:
     {
         DateTime currtime(start_date_);
         SGP4 sgp(tles_[active_tle_]);
-
         cout << currtime.ToString() << endl;
-
+        cout << end_date_.ToString() << endl;
+        while (currtime < end_date_)
+        {
+            currtime = currtime.Add(dt_);
+            cout << currtime.ToString() << endl;
+        }
         return "GeoJSON";
     }
 
@@ -109,6 +113,7 @@ int main(int argc, char **argv)
                                 end_tm.tm_min,
                                 end_tm.tm_sec, 
                                 0);
+            cout << end_time.ToString() << endl;
             break;
         case 't':
             t_opt = optarg;
