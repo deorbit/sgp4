@@ -25,30 +25,47 @@ class Groundtrack
 {
 public:
     Groundtrack(DateTime start_date, 
-                DateTime end_date_, 
+                DateTime end_date,
+                int dt,
                 std::vector<Tle> tles)
                 : start_date_(start_date),
                   end_date_(end_date_),
-                  tles_(tles)
+                  dt_(TimeSpan(0, 0, dt)),
+                  tles_(tles),
+                  active_tle_(0)
 {
     std::sort(tles_.begin(), tles_.end(), chron);
+    cout << "dt:\t" << dt_ << endl;
 }
 
+    std::string GeoJSON() 
+    {
+        DateTime currtime(start_date_);
+        SGP4 sgp(tles_[active_tle_]);
+
+        cout << currtime.ToString() << endl;
+
+        return "GeoJSON";
+    }
+
 private:
-    DateTime start_date_;
-    DateTime end_date_;
-    std::vector<Tle> tles_;
+    DateTime            start_date_;
+    DateTime            end_date_;
+    TimeSpan            dt_;
+    std::vector<Tle>    tles_;
+    size_t              active_tle_; // index into tles_.
 };
 
 int main(int argc, char **argv)
 {
     struct tm start_tm, end_tm;
     DateTime start_time, end_time;
+    long long dt = 60; // delta time between groundtrack points
 	int c;
-    char *s_opt = 0, *e_opt = 0;
+    char *s_opt = 0, *e_opt = 0, *t_opt = 0;
     char *zero_opt = 0, *one_opt = 0, *two_opt = 0;
 
-    std::string options("0:1:2:3:s:e:");
+    std::string options("0:1:2:3:s:e:t:");
     while ( (c = getopt(argc, argv, options.c_str())) != -1) {
         switch (c) {
         case '0':
@@ -92,6 +109,10 @@ int main(int argc, char **argv)
                                 end_tm.tm_sec, 
                                 0);
             break;
+        case 't':
+            t_opt = optarg;
+            dt = atoll(t_opt);
+            break;
         case '?':
             break;
         default:
@@ -113,9 +134,10 @@ int main(int argc, char **argv)
         getline(cin, line2);
         Tle tle(line1, line2);
         if (tle.Epoch() >= start_time && tle.Epoch() <= end_time)
-            cout << tle.Epoch() << endl;
+            tles.push_back(tle);
     }
-    Groundtrack gt(start_time, end_time, std::move(tles));
+    Groundtrack gt(start_time, end_time, dt, std::move(tles));
+    cout << gt.GeoJSON() << endl;
 
     exit (0);
 	return 0;
