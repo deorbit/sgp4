@@ -5,6 +5,7 @@
 
 #include <SGP4.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -41,14 +42,36 @@ public:
 
     std::string GeoJSON() 
     {
+        size_t num_tles = tles_.size();
         DateTime currtime(start_date_);
+        DateTime time_for_next_tle(currtime.AddDays(7));
         SGP4 sgp(tles_[active_tle_]);
         cout << currtime.ToString() << endl;
         cout << end_date_.ToString() << endl;
+
+        cout << "Num TLEs: " << num_tles << endl;
+
         while (currtime < end_date_)
         {
-            currtime = currtime.Add(dt_);
-            cout << currtime.ToString() << endl;
+            if (currtime >= time_for_next_tle && active_tle_ < num_tles - 1) 
+            {
+                try {
+                    active_tle_++;
+                    sgp.SetTle(tles_[active_tle_]);
+                    time_for_next_tle = tles_[active_tle_].Epoch() +
+                            (tles_[active_tle_+1].Epoch() - 
+                             tles_[active_tle_].Epoch()).Multiply(0.5);
+                    cout << time_for_next_tle.ToString() << endl;
+                } catch (std::exception& e) {
+                    std::cout << "Exception: " << e.what() << endl;
+                }
+            }
+
+            try {
+                currtime = currtime.Add(dt_);
+            } catch (std::exception& e) {
+                    std::cout << "Exception: " << e.what() << endl;
+            }
         }
         return "GeoJSON";
     }
@@ -65,12 +88,13 @@ int main(int argc, char **argv)
 {
     struct tm start_tm, end_tm;
     DateTime start_time, end_time;
-    long long dt = 60; // delta time between groundtrack points
+    string tle_filename;
+    int dt = 60; // delta time between groundtrack points
 	int c;
-    char *s_opt = 0, *e_opt = 0, *t_opt = 0;
+    char *s_opt = 0, *e_opt = 0, *t_opt = 0, *f_opt = 0;
     char *zero_opt = 0, *one_opt = 0, *two_opt = 0;
 
-    std::string options("0:1:2:3:s:e:t:");
+    std::string options("0:1:2:3:s:e:t:f:");
     while ( (c = getopt(argc, argv, options.c_str())) != -1) {
         switch (c) {
         case '0':
@@ -117,7 +141,11 @@ int main(int argc, char **argv)
             break;
         case 't':
             t_opt = optarg;
-            dt = atoll(t_opt);
+            dt = atoi(t_opt);
+            break;
+        case 'f':
+            f_opt = optarg;
+            tle_filename = f_opt;
             break;
         case '?':
             break;
@@ -133,11 +161,19 @@ int main(int argc, char **argv)
         printf ("\n");
     }
 
-    // Handle TLEs piped into stdin.
+    // Read TLEs from the input file or piped into stdin.
+    istream* tle_source;
+    ifstream tle_file;
+    tle_source = &cin;
+    if (!tle_filename.empty()) {
+        tle_file.open(tle_filename);
+        tle_source = &tle_file;
+    }
     string line1, line2;
     vector<Tle> tles;
-    while(getline(cin, line1)) {
-        getline(cin, line2);
+
+    while(getline(*tle_source, line1)) {
+        getline(*tle_source, line2);
         Tle tle(line1, line2);
         if (tle.Epoch() >= start_time && tle.Epoch() <= end_time)
             tles.push_back(tle);

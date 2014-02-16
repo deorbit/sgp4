@@ -80,6 +80,11 @@ public:
         return TimeSpan(m_ticks - ts.m_ticks);
     }
 
+    TimeSpan Multiply(const double factor) const
+    {
+        return TimeSpan(m_ticks * factor);
+    }
+
     int Compare(const TimeSpan& ts) const
     {
         int ret = 0;
