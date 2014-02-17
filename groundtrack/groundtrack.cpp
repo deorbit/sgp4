@@ -17,15 +17,20 @@
 
 using namespace std;
 
-// Chronological sort.
+// Chronological TLE sort.
 bool chron(const Tle& a, const Tle& b)
 {
     return a.Epoch() < b.Epoch();
 }
 
+
 class Groundtrack
 {
 public:
+    enum Format {
+        GeoJSON
+    };
+
     Groundtrack(DateTime start_date, 
                 DateTime end_date,
                 int dt,
@@ -34,46 +39,79 @@ public:
                   end_date_(end_date),
                   dt_(TimeSpan(0, 0, dt)),
                   tles_(tles),
-                  active_tle_(0)
-{
-    std::sort(tles_.begin(), tles_.end(), chron);
-    cout << "dt:\t" << dt_ << endl;
-}
+                  active_tle_(0),
+                  max_terminal_propagation_(7, 0, 0, 0, 0)
+    {
+        std::sort(tles_.begin(), tles_.end(), chron);
 
-    std::string GeoJSON() 
+        // Roll back end date if it goes too far beyond
+        // the last TLE.
+        if (!tles_.empty()) {
+            if (end_date_ - tles_.back().Epoch() > max_terminal_propagation_)
+                end_date_ = tles_.back().Epoch().Add(max_terminal_propagation_);
+        }
+
+        cout << "TLEs:" << endl;
+        for (int i=0; i<tles_.size(); ++i)
+            cout << tles_[i].Epoch() << endl;
+
+    }
+
+    std::string Generate(Groundtrack::Format format) 
     {
         size_t num_tles = tles_.size();
+
+        if (num_tles == 0) return "";
+
         DateTime currtime(start_date_);
-        DateTime time_for_next_tle(currtime.AddDays(7));
-        SGP4 sgp(tles_[active_tle_]);
-        cout << currtime.ToString() << endl;
-        cout << end_date_.ToString() << endl;
-
-        cout << "Num TLEs: " << num_tles << endl;
-
+        DateTime tle_transition(currtime.Add(max_terminal_propagation_));
+        if (num_tles > 1) tle_transition = TLETransitionTime(active_tle_, 
+                                                             active_tle_+1);
+        
+        SGP4 sgp4(tles_[active_tle_]);
         while (currtime < end_date_)
         {
-            if (currtime >= time_for_next_tle && active_tle_ < num_tles - 1) 
-            {
-                try {
-                    active_tle_++;
-                    sgp.SetTle(tles_[active_tle_]);
-                    time_for_next_tle = tles_[active_tle_].Epoch() +
-                            (tles_[active_tle_+1].Epoch() - 
-                             tles_[active_tle_].Epoch()).Multiply(0.5);
-                    cout << time_for_next_tle.ToString() << endl;
-                } catch (std::exception& e) {
-                    std::cout << "Exception: " << e.what() << endl;
-                }
-            }
+            Eci eci = sgp4.FindPosition(currtime);
+            CoordGeodetic geo = eci.ToGeodetic();
 
-            try {
-                currtime = currtime.Add(dt_);
-            } catch (std::exception& e) {
-                    std::cout << "Exception: " << e.what() << endl;
+            if (currtime >= tle_transition && active_tle_ < num_tles - 1) 
+            {
+                active_tle_++;
+                sgp4.SetTle(tles_[active_tle_]);
+                tle_transition = TLETransitionTime(active_tle_, active_tle_+1);
             }
+            currtime = currtime.Add(dt_);
         }
-        return "GeoJSON";
+
+        string gt_out;
+
+        switch(format)
+        {
+        case(Groundtrack::Format::GeoJSON):
+            gt_out = GenGeoJSON();
+        break;
+        }
+        return gt_out;
+    }
+
+    std::string GenGeoJSON()
+    {
+        string geojson_preamble = "{\"type\":\"FeatureCollection\","
+                         "\"features\":["
+                         "{"
+                         "\"type\": \"Feature\","
+                         "\"properties\":"
+                         "{\""
+                         "\"name\":\"[...]\""
+                         "},"
+                         "\"geometry\":"
+                         "{"
+                         "\"type\":\"LineString\","
+                         "\"coordinates\": [";
+        string geojson_terminator = "]}}]}"; 
+        string coords = "";
+        string geojson = geojson_preamble + coords + geojson_terminator;
+        return geojson;
     }
 
 private:
@@ -82,6 +120,28 @@ private:
     TimeSpan            dt_;
     std::vector<Tle>    tles_;
     size_t              active_tle_; // index into tles_.
+    const TimeSpan      max_terminal_propagation_; // 7 days
+
+    /**
+     * Calculate the midpoint in time between TLEs with the
+     * given indices into the tle_ vector.
+     */ 
+    DateTime TLETransitionTime(const size_t tle1, const size_t tle2) const
+    {
+        DateTime t;
+
+        if (tle1 < tles_.size() - 1 && tle2 < tles_.size()) {
+            t = tles_[tle1].Epoch() +
+                            (tles_[tle2].Epoch() - 
+                             tles_[tle1].Epoch()).Multiply(0.5);
+            cout << "Calculating transition: " << tle1 << ":" << tle2
+                 << "\t" << t.ToString() << endl;
+        }
+        else 
+            t = tles_.back().Epoch().Add(max_terminal_propagation_);
+
+        return t;
+    }
 };
 
 int main(int argc, char **argv)
@@ -166,7 +226,7 @@ int main(int argc, char **argv)
     ifstream tle_file;
     tle_source = &cin;
     if (!tle_filename.empty()) {
-        tle_file.open(tle_filename);
+        tle_file.open(tle_filename.c_str());
         tle_source = &tle_file;
     }
     string line1, line2;
@@ -179,7 +239,7 @@ int main(int argc, char **argv)
             tles.push_back(tle);
     }
     Groundtrack gt(start_time, end_time, dt, std::move(tles));
-    cout << gt.GeoJSON() << endl;
+    cout << gt.Generate(Groundtrack::Format::GeoJSON) << endl;
 
     exit (0);
 	return 0;

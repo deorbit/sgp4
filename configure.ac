@@ -19,9 +19,9 @@ AC_ARG_ENABLE(debug,
               enable_debug=no)
 
 if test x$enable_debug = xyes; then
-  AM_CXXFLAGS="-g       -O0                      -std=c++11 -stdlib=libc++ -Wextra -W -Wall -Wconversion"
+  AM_CXXFLAGS="-g       -O0                      -std=c++11 -stdlib=libc++ -Wextra -W -Weverything -Wno-switch-enum -Wconversion"
 else
-  AM_CXXFLAGS="-DNDEBUG -O2 -fomit-frame-pointer -std=c++11 -stdlib=libc++ -Wextra -W -Wall -Wconversion"
+  AM_CXXFLAGS="-DNDEBUG -O2 -fomit-frame-pointer -std=c++11 -stdlib=libc++ -Wextra -W -Weverything -Wno-switch-enum -Wconversion"
 fi
 
 AC_SEARCH_LIBS([clock_gettime],
