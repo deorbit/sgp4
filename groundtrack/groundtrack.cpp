@@ -8,6 +8,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <tuple>
 #include <algorithm>
 #include <utility>
 #include <stdio.h>
@@ -50,11 +51,6 @@ public:
             if (end_date_ - tles_.back().Epoch() > max_terminal_propagation_)
                 end_date_ = tles_.back().Epoch().Add(max_terminal_propagation_);
         }
-
-        cout << "TLEs:" << endl;
-        for (int i=0; i<tles_.size(); ++i)
-            cout << tles_[i].Epoch() << endl;
-
     }
 
     std::string Generate(Groundtrack::Format format) 
@@ -73,6 +69,7 @@ public:
         {
             Eci eci = sgp4.FindPosition(currtime);
             CoordGeodetic geo = eci.ToGeodetic();
+            latlons_.push_back(make_tuple(currtime, geo));
 
             if (currtime >= tle_transition && active_tle_ < num_tles - 1) 
             {
@@ -101,7 +98,7 @@ public:
                          "{"
                          "\"type\": \"Feature\","
                          "\"properties\":"
-                         "{\""
+                         "{"
                          "\"name\":\"[...]\""
                          "},"
                          "\"geometry\":"
@@ -110,17 +107,29 @@ public:
                          "\"coordinates\": [";
         string geojson_terminator = "]}}]}"; 
         string coords = "";
+
+        size_t numpoints = latlons_.size();
+        for (size_t i = 0; i < numpoints; ++i)
+        {
+            string comma = ",";
+            if (i == numpoints - 1)
+                comma = "";
+            string coord = "[" + get<1>(latlons_[i]).ToStringLonLat() + 
+                            "]" + comma; 
+            coords.append(coord);
+        }
         string geojson = geojson_preamble + coords + geojson_terminator;
         return geojson;
     }
 
 private:
-    DateTime            start_date_;
-    DateTime            end_date_;
-    TimeSpan            dt_;
-    std::vector<Tle>    tles_;
-    size_t              active_tle_; // index into tles_.
-    const TimeSpan      max_terminal_propagation_; // 7 days
+    DateTime                                start_date_;
+    DateTime                                end_date_;
+    TimeSpan                                dt_;
+    vector<Tle>                             tles_;
+    vector<tuple<DateTime, CoordGeodetic> > latlons_;
+    size_t                                  active_tle_; // index into tles_.
+    const TimeSpan                          max_terminal_propagation_; // 7 days
 
     /**
      * Calculate the midpoint in time between TLEs with the
@@ -134,8 +143,6 @@ private:
             t = tles_[tle1].Epoch() +
                             (tles_[tle2].Epoch() - 
                              tles_[tle1].Epoch()).Multiply(0.5);
-            cout << "Calculating transition: " << tle1 << ":" << tle2
-                 << "\t" << t.ToString() << endl;
         }
         else 
             t = tles_.back().Epoch().Add(max_terminal_propagation_);
@@ -158,15 +165,12 @@ int main(int argc, char **argv)
     while ( (c = getopt(argc, argv, options.c_str())) != -1) {
         switch (c) {
         case '0':
-        	std::cout << "Option 0: " << optarg << "\n";
         	zero_opt = optarg;
         	break;
         case '1':
-        std::cout << "Option 0: " << optarg << "\n";
         	one_opt = optarg;
         	break;
         case '2':
-        	std::cout << "Option 0: " << optarg << "\n";
         	two_opt = optarg;
             break;
         case 's':
@@ -175,7 +179,6 @@ int main(int argc, char **argv)
                 cerr << "Error parsing start time.\n";
                 exit(0);
             }
-            cout << start_tm.tm_mon << endl;
             start_time.Initialise(1900 + start_tm.tm_year, 
                                   start_tm.tm_mon + 1,
                                   start_tm.tm_mday, 
@@ -197,7 +200,6 @@ int main(int argc, char **argv)
                                 end_tm.tm_min,
                                 end_tm.tm_sec, 
                                 0);
-            cout << end_time.ToString() << endl;
             break;
         case 't':
             t_opt = optarg;

@@ -135,6 +135,15 @@ public:
         return ss.str();
     }
 
+    std::string ToStringLonLat() const
+    {
+       std::stringstream ss;
+        ss << std::right << std::fixed << std::setprecision(3);
+        ss << std::setw(7) << Util::RadiansToDegrees(longitude);
+        ss << "," << std::setw(7) << Util::RadiansToDegrees(latitude);
+        return ss.str();
+    }
+
     /** latitude in radians (-PI >= latitude < PI) */
     double latitude;
     /** latitude in radians (-PI/2 >= latitude <= PI/2) */
