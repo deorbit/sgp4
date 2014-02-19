@@ -93,7 +93,7 @@ public:
         {
             ret = -1;
         }
-        if (m_ticks < ts.m_ticks)
+        if (m_ticks > ts.m_ticks)
         {
             ret = 1;
         }

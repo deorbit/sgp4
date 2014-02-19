@@ -31,6 +31,7 @@ public:
     enum Format {
         GeoJSON
     };
+    static const int max_prop_days = 7;
 
     Groundtrack(DateTime start_date, 
                 DateTime end_date,
@@ -41,15 +42,16 @@ public:
                   dt_(TimeSpan(0, 0, dt)),
                   tles_(tles),
                   active_tle_(0),
-                  max_terminal_propagation_(7, 0, 0, 0, 0)
+                  max_terminal_propagation_(max_prop_days, 0, 0, 0, 0)
     {
         std::sort(tles_.begin(), tles_.end(), chron);
 
         // Roll back end date if it goes too far beyond
         // the last TLE.
         if (!tles_.empty()) {
-            if (end_date_ - tles_.back().Epoch() > max_terminal_propagation_)
-                end_date_ = tles_.back().Epoch().Add(max_terminal_propagation_);
+            Tle last_tle = tles_.back();
+            if ((end_date_ - last_tle.Epoch()) > max_terminal_propagation_)
+                end_date_ = last_tle.Epoch().Add(max_terminal_propagation_);
         }
     }
 
@@ -64,6 +66,7 @@ public:
         if (num_tles > 1) tle_transition = TLETransitionTime(active_tle_, 
                                                              active_tle_+1);
         
+
         SGP4 sgp4(tles_[active_tle_]);
         while (currtime < end_date_)
         {
@@ -89,6 +92,34 @@ public:
         break;
         }
         return gt_out;
+    }
+
+private:
+    DateTime                                start_date_;
+    DateTime                                end_date_;
+    TimeSpan                                dt_;
+    vector<Tle>                             tles_;
+    vector<tuple<DateTime, CoordGeodetic> > latlons_;
+    size_t                                  active_tle_; // index into tles_.
+    const TimeSpan                          max_terminal_propagation_; // 7 days
+
+    /**
+     * Calculate the midpoint in time between TLEs with the
+     * given indices into the tle_ vector.
+     */ 
+    DateTime TLETransitionTime(const size_t tle1, const size_t tle2) const
+    {
+        DateTime t;
+
+        if (tle1 < tles_.size() - 1 && tle2 < tles_.size()) {
+            t = tles_[tle1].Epoch() +
+                            (tles_[tle2].Epoch() - 
+                             tles_[tle1].Epoch()).Multiply(0.5);
+        }
+        else 
+            t = tles_.back().Epoch().Add(max_terminal_propagation_);
+
+        return t;
     }
 
     std::string GenGeoJSON()
@@ -122,33 +153,6 @@ public:
         return geojson;
     }
 
-private:
-    DateTime                                start_date_;
-    DateTime                                end_date_;
-    TimeSpan                                dt_;
-    vector<Tle>                             tles_;
-    vector<tuple<DateTime, CoordGeodetic> > latlons_;
-    size_t                                  active_tle_; // index into tles_.
-    const TimeSpan                          max_terminal_propagation_; // 7 days
-
-    /**
-     * Calculate the midpoint in time between TLEs with the
-     * given indices into the tle_ vector.
-     */ 
-    DateTime TLETransitionTime(const size_t tle1, const size_t tle2) const
-    {
-        DateTime t;
-
-        if (tle1 < tles_.size() - 1 && tle2 < tles_.size()) {
-            t = tles_[tle1].Epoch() +
-                            (tles_[tle2].Epoch() - 
-                             tles_[tle1].Epoch()).Multiply(0.5);
-        }
-        else 
-            t = tles_.back().Epoch().Add(max_terminal_propagation_);
-
-        return t;
-    }
 };
 
 int main(int argc, char **argv)
@@ -237,7 +241,8 @@ int main(int argc, char **argv)
     while(getline(*tle_source, line1)) {
         getline(*tle_source, line2);
         Tle tle(line1, line2);
-        if (tle.Epoch() >= start_time && tle.Epoch() <= end_time)
+        if (tle.Epoch() >= start_time.AddDays(-1.0 * Groundtrack::max_prop_days) && 
+            tle.Epoch() <= end_time.AddDays(Groundtrack::max_prop_days))
             tles.push_back(tle);
     }
     Groundtrack gt(start_time, end_time, dt, std::move(tles));
