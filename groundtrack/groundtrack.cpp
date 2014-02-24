@@ -16,7 +16,38 @@
 #include <unistd.h>
 #include <time.h>
 
-using namespace std;
+std::istream& safeGetline(std::istream& is, std::string& t)
+{
+    t.clear();
+
+    // The characters in the stream are read one-by-one using a std::streambuf.
+    // That is faster than reading them one-by-one using the std::istream.
+    // Code that uses streambuf this way must be guarded by a sentry object.
+    // The sentry object performs various tasks,
+    // such as thread synchronization and updating the stream state.
+
+    std::istream::sentry se(is, true);
+    std::streambuf* sb = is.rdbuf();
+
+    for(;;) {
+        int c = sb->sbumpc();
+        switch (c) {
+        case '\n':
+            return is;
+        case '\r':
+            if(sb->sgetc() == '\n')
+                sb->sbumpc();
+            return is;
+        case EOF:
+            // Also handle the case when the last line has no line ending
+            if(t.empty())
+                is.setstate(std::ios::eofbit);
+            return is;
+        default:
+            t += (char)c;
+        }
+    }
+}
 
 // Chronological TLE sort.
 bool chron(const Tle& a, const Tle& b)
@@ -72,7 +103,7 @@ public:
         {
             Eci eci = sgp4.FindPosition(currtime);
             CoordGeodetic geo = eci.ToGeodetic();
-            latlons_.push_back(make_tuple(currtime, geo));
+            latlons_.push_back(std::make_tuple(currtime, geo));
 
             if (currtime >= tle_transition && active_tle_ < num_tles - 1) 
             {
@@ -83,7 +114,7 @@ public:
             currtime = currtime.Add(dt_);
         }
 
-        string gt_out;
+        std::string gt_out;
 
         switch(format)
         {
@@ -98,8 +129,8 @@ private:
     DateTime                                start_date_;
     DateTime                                end_date_;
     TimeSpan                                dt_;
-    vector<Tle>                             tles_;
-    vector<tuple<DateTime, CoordGeodetic> > latlons_;
+    std::vector<Tle>                             tles_;
+    std::vector<std::tuple<DateTime, CoordGeodetic> > latlons_;
     size_t                                  active_tle_; // index into tles_.
     const TimeSpan                          max_terminal_propagation_; // 7 days
 
@@ -124,7 +155,7 @@ private:
 
     std::string GenGeoJSON()
     {
-        string geojson_preamble = "{\"type\":\"FeatureCollection\","
+        std::string geojson_preamble = "{\"type\":\"FeatureCollection\","
                          "\"features\":["
                          "{"
                          "\"type\": \"Feature\","
@@ -136,20 +167,20 @@ private:
                          "{"
                          "\"type\":\"LineString\","
                          "\"coordinates\": [";
-        string geojson_terminator = "]}}]}"; 
-        string coords = "";
+        std::string geojson_terminator = "]}}]}"; 
+        std::string coords = "";
 
         size_t numpoints = latlons_.size();
         for (size_t i = 0; i < numpoints; ++i)
         {
-            string comma = ",";
+            std::string comma = ",";
             if (i == numpoints - 1)
                 comma = "";
-            string coord = "[" + get<1>(latlons_[i]).ToStringLonLat() + 
+            std::string coord = "[" + std::get<1>(latlons_[i]).ToStringLonLat() + 
                             "]" + comma; 
             coords.append(coord);
         }
-        string geojson = geojson_preamble + coords + geojson_terminator;
+        std::string geojson = geojson_preamble + coords + geojson_terminator;
         return geojson;
     }
 
@@ -159,7 +190,7 @@ int main(int argc, char **argv)
 {
     struct tm start_tm, end_tm;
     DateTime start_time, end_time;
-    string tle_filename;
+    std::string tle_filename;
     int dt = 60; // delta time between groundtrack points
 	int c;
     char *s_opt = 0, *e_opt = 0, *t_opt = 0, *f_opt = 0;
@@ -180,7 +211,7 @@ int main(int argc, char **argv)
         case 's':
             s_opt = optarg;
             if (strptime(s_opt, "%Y-%m-%d %H:%M:%S", &start_tm) == NULL) {
-                cerr << "Error parsing start time.\n";
+                std::cerr << "Error parsing start time.\n";
                 exit(0);
             }
             start_time.Initialise(1900 + start_tm.tm_year, 
@@ -194,7 +225,7 @@ int main(int argc, char **argv)
         case 'e':
             e_opt = optarg;
             if (strptime(e_opt, "%Y-%m-%d %H:%M:%S", &end_tm) == NULL) {
-                cerr << "Error parsing end time.\n";
+                std::cerr << "Error parsing end time.\n";
                 exit(0);
             }
             end_time.Initialise(1900 + end_tm.tm_year, 
@@ -228,25 +259,27 @@ int main(int argc, char **argv)
     }
 
     // Read TLEs from the input file or piped into stdin.
-    istream* tle_source;
-    ifstream tle_file;
-    tle_source = &cin;
+    std::istream* tle_source;
+    std::ifstream tle_file;
+    tle_source = &std::cin;
     if (!tle_filename.empty()) {
         tle_file.open(tle_filename.c_str());
         tle_source = &tle_file;
     }
-    string line1, line2;
-    vector<Tle> tles;
+    std::string line1, line2;
+    std::vector<Tle> tles;
 
-    while(getline(*tle_source, line1)) {
-        getline(*tle_source, line2);
+    while(!safeGetline(*tle_source, line1).eof()) {
+        safeGetline(*tle_source, line2);
+        if (line1.empty() || line2.empty())
+            continue;
         Tle tle(line1, line2);
         if (tle.Epoch() >= start_time.AddDays(-1.0 * Groundtrack::max_prop_days) && 
             tle.Epoch() <= end_time.AddDays(Groundtrack::max_prop_days))
             tles.push_back(tle);
     }
     Groundtrack gt(start_time, end_time, dt, std::move(tles));
-    cout << gt.Generate(Groundtrack::Format::GeoJSON) << endl;
+    std::cout << gt.Generate(Groundtrack::Format::GeoJSON) << std::endl;
 
     exit (0);
 	return 0;
