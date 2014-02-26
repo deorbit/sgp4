@@ -211,7 +211,7 @@ int main(int argc, char **argv)
         case 's':
             s_opt = optarg;
             if (strptime(s_opt, "%Y-%m-%d %H:%M:%S", &start_tm) == NULL) {
-                std::cerr << "Error parsing start time.\n";
+                std::cerr << "Error parsing start time: " << s_opt << "\n";
                 exit(0);
             }
             start_time.Initialise(1900 + start_tm.tm_year, 
@@ -225,7 +225,7 @@ int main(int argc, char **argv)
         case 'e':
             e_opt = optarg;
             if (strptime(e_opt, "%Y-%m-%d %H:%M:%S", &end_tm) == NULL) {
-                std::cerr << "Error parsing end time.\n";
+                std::cerr << "Error parsing end time: " << e_opt << "\n";
                 exit(0);
             }
             end_time.Initialise(1900 + end_tm.tm_year, 
