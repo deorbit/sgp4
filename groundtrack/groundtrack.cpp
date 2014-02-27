@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <time.h>
 
-std::istream& safeGetline(std::istream& is, std::string& t)
+static inline std::istream& safeGetline(std::istream& is, std::string& t)
 {
     t.clear();
 
@@ -273,10 +273,19 @@ int main(int argc, char **argv)
         safeGetline(*tle_source, line2);
         if (line1.empty() || line2.empty())
             continue;
-        Tle tle(line1, line2);
-        if (tle.Epoch() >= start_time.AddDays(-1.0 * Groundtrack::max_prop_days) && 
-            tle.Epoch() <= end_time.AddDays(Groundtrack::max_prop_days))
-            tles.push_back(tle);
+        // line1 = rtrim(line1);
+        // line2 = rtrim(line2);
+        try {
+            Tle tle(line1, line2);
+            if (tle.Epoch() >= start_time.AddDays(-1.0 * Groundtrack::max_prop_days) && 
+                tle.Epoch() <= end_time.AddDays(Groundtrack::max_prop_days)) 
+            {
+                tles.push_back(tle);
+            }
+        } catch(TleException& e) {
+            std::cerr << "TleException: " << e.what() << "\n";
+            continue;   
+        }
     }
     Groundtrack gt(start_time, end_time, dt, std::move(tles));
     std::cout << gt.Generate(Groundtrack::Format::GeoJSON) << std::endl;
