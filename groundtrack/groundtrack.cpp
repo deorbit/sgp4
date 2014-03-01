@@ -195,8 +195,9 @@ int main(int argc, char **argv)
 	int c;
     char *s_opt = 0, *e_opt = 0, *t_opt = 0, *f_opt = 0;
     char *zero_opt = 0, *one_opt = 0, *two_opt = 0;
+    bool verbose = false;
 
-    std::string options("0:1:2:3:s:e:t:f:");
+    std::string options("0:1:2:3:s:e:t:f:v");
     while ( (c = getopt(argc, argv, options.c_str())) != -1) {
         switch (c) {
         case '0':
@@ -244,6 +245,8 @@ int main(int argc, char **argv)
             f_opt = optarg;
             tle_filename = f_opt;
             break;
+        case 'v':
+            verbose = true;
         case '?':
             break;
         default:
@@ -269,7 +272,9 @@ int main(int argc, char **argv)
     std::string line1, line2;
     std::vector<Tle> tles;
 
-    while(!safeGetline(*tle_source, line1).eof()) {
+    if (verbose) std::cerr << "Reading TLEs.\n";
+    while(!safeGetline(*tle_source, line1).eof()) 
+    {
         safeGetline(*tle_source, line2);
         if (line1.empty() || line2.empty())
             continue;
@@ -282,13 +287,18 @@ int main(int argc, char **argv)
             {
                 tles.push_back(tle);
             }
-        } catch(TleException& e) {
-            std::cerr << "TleException: " << e.what() << "\n";
+        } catch(TleException& e) 
+        {
+            if (verbose) std::cerr << "TleException: " << e.what() << "\n";
             continue;   
         }
     }
+    if (verbose) std::cerr << "Done reading TLEs.\nGenerating groundtrack.\n";
+
     Groundtrack gt(start_time, end_time, dt, std::move(tles));
     std::cout << gt.Generate(Groundtrack::Format::GeoJSON) << std::endl;
+
+    if (verbose) std::cerr << "Done generating groundtrack. Exiting.\n";
 
     exit (0);
 	return 0;
