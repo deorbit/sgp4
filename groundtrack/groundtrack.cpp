@@ -272,7 +272,9 @@ int main(int argc, char **argv)
     std::string line1, line2;
     std::vector<Tle> tles;
 
-    if (verbose) std::cerr << "Reading TLEs.\n";
+    if (verbose) std::cerr << "Generating track from " << start_time.ToString() <<
+        " to " << end_time.ToString() << ".\nReading TLEs.\n";
+    
     while(!safeGetline(*tle_source, line1).eof()) 
     {
         safeGetline(*tle_source, line2);
