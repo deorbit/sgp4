@@ -277,7 +277,15 @@ int main(int argc, char **argv)
     {
         safeGetline(*tle_source, line2);
         if (line1.empty() || line2.empty())
+        {
             continue;
+        }
+
+        if (line1.length() != 69 || line2.length() != 69)
+        {
+            continue;
+        }
+
         // line1 = rtrim(line1);
         // line2 = rtrim(line2);
         try {
