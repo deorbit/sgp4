@@ -120,7 +120,7 @@ public:
         {
         case(Groundtrack::Format::GeoJSON):
             gt_out = GenGeoJSON();
-        break;
+            break;
         }
         return gt_out;
     }
