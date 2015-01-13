@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <time.h>
 
-std::istream& safeGetline(std::istream& is, std::string& t)
+static inline std::istream& safeGetline(std::istream& is, std::string& t)
 {
     t.clear();
 
@@ -195,8 +195,9 @@ int main(int argc, char **argv)
 	int c;
     char *s_opt = 0, *e_opt = 0, *t_opt = 0, *f_opt = 0;
     char *zero_opt = 0, *one_opt = 0, *two_opt = 0;
+    bool verbose = false;
 
-    std::string options("0:1:2:3:s:e:t:f:");
+    std::string options("0:1:2:3:s:e:t:f:v");
     while ( (c = getopt(argc, argv, options.c_str())) != -1) {
         switch (c) {
         case '0':
@@ -211,7 +212,7 @@ int main(int argc, char **argv)
         case 's':
             s_opt = optarg;
             if (strptime(s_opt, "%Y-%m-%d %H:%M:%S", &start_tm) == NULL) {
-                std::cerr << "Error parsing start time.\n";
+                std::cerr << "Error parsing start time: " << s_opt << "\n";
                 exit(0);
             }
             start_time.Initialise(1900 + start_tm.tm_year, 
@@ -225,7 +226,7 @@ int main(int argc, char **argv)
         case 'e':
             e_opt = optarg;
             if (strptime(e_opt, "%Y-%m-%d %H:%M:%S", &end_tm) == NULL) {
-                std::cerr << "Error parsing end time.\n";
+                std::cerr << "Error parsing end time: " << e_opt << "\n";
                 exit(0);
             }
             end_time.Initialise(1900 + end_tm.tm_year, 
@@ -244,6 +245,8 @@ int main(int argc, char **argv)
             f_opt = optarg;
             tle_filename = f_opt;
             break;
+        case 'v':
+            verbose = true;
         case '?':
             break;
         default:
@@ -269,17 +272,43 @@ int main(int argc, char **argv)
     std::string line1, line2;
     std::vector<Tle> tles;
 
-    while(!safeGetline(*tle_source, line1).eof()) {
+    if (verbose) std::cerr << "Generating track from " << start_time.ToString() <<
+        " to " << end_time.ToString() << ".\nReading TLEs.\n";
+    
+    while(!safeGetline(*tle_source, line1).eof()) 
+    {
         safeGetline(*tle_source, line2);
         if (line1.empty() || line2.empty())
+        {
             continue;
-        Tle tle(line1, line2);
-        if (tle.Epoch() >= start_time.AddDays(-1.0 * Groundtrack::max_prop_days) && 
-            tle.Epoch() <= end_time.AddDays(Groundtrack::max_prop_days))
-            tles.push_back(tle);
+        }
+
+        if (line1.length() != 69 || line2.length() != 69)
+        {
+            continue;
+        }
+
+        // line1 = rtrim(line1);
+        // line2 = rtrim(line2);
+        try {
+            Tle tle(line1, line2);
+            if (tle.Epoch() >= start_time.AddDays(-1.0 * Groundtrack::max_prop_days) && 
+                tle.Epoch() <= end_time.AddDays(Groundtrack::max_prop_days)) 
+            {
+                tles.push_back(tle);
+            }
+        } catch(TleException& e) 
+        {
+            if (verbose) std::cerr << "TleException: " << e.what() << "\n";
+            continue;   
+        }
     }
+    if (verbose) std::cerr << "Done reading TLEs.\nGenerating groundtrack.\n";
+
     Groundtrack gt(start_time, end_time, dt, std::move(tles));
     std::cout << gt.Generate(Groundtrack::Format::GeoJSON) << std::endl;
+
+    if (verbose) std::cerr << "Done generating groundtrack. Exiting.\n";
 
     exit (0);
 	return 0;
